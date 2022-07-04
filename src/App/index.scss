@@ -1,0 +1,47 @@
+.navbar {
+  height: 35px;
+  width: 100vw;
+  position: fixed;
+  left: 0;
+  background-color: #324044;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  -webkit-app-region: drag;
+
+  * {
+    user-select: none;
+  }
+
+  & > img {
+    margin-left: 15px;
+    object-fit: contain;
+  }
+}
+
+.content {
+  height: calc(100vh - 35px);
+  width: 100vw;
+  position: absolute;
+  top: 35px;
+  left: 0;
+  background-color: #333;
+}
+
+.toolbar {
+  -webkit-app-region: no-drag;
+  margin-left: 10px;
+  margin-right: 10px;
+
+  & > * {
+    padding-left: 15px;
+    padding-right: 15px;
+    line-height: 35px;
+    color: #3fd294;
+    font-size: 14px;
+    
+    &:hover {
+      background-color: #3d5055
+    }
+  }
+}
