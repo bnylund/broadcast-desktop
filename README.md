@@ -1,4 +1,5 @@
 # Broadcasting System - Desktop Edition
+[![Build/release](https://github.com/bnylund/broadcast-desktop/actions/workflows/build.yml/badge.svg?event=push)](https://github.com/bnylund/broadcast-desktop/actions/workflows/build.yml)
 
 This repository offers an Electron app running a React webpage that allows users to host local relays, manage organizations, manage teams in an organization, etc. The main reason for this application is to have an all-in-one hub where we can host local relays for zero latency game data streaming to the overlays so that they are in sync.
 
