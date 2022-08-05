@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Main } from './Main'
-import logo from './logo.png'
+import logo from '../assets/logo.png'
 import ben from '../assets/ben.jpg'
 import './index.scss'
 
