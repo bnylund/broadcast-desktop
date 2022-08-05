@@ -1,0 +1,9 @@
+.servers {
+  width: calc(100% - 40px);
+  height: calc(100% - 40px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+}

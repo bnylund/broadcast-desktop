@@ -32,6 +32,9 @@
   -webkit-app-region: no-drag;
   margin-left: 10px;
   margin-right: 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
 
   & > * {
     padding-left: 15px;
@@ -39,9 +42,136 @@
     line-height: 35px;
     color: #3fd294;
     font-size: 14px;
-    
-    &:hover {
-      background-color: #3d5055
+
+    &:hover,
+    &[data-open='true'] {
+      background-color: #3d5055;
     }
+  }
+}
+
+.toolbarMenu {
+  position: fixed;
+  border-radius: 2px;
+  background-color: #454545;
+  box-shadow: 1px 1px 5px #222;
+  min-width: 250px;
+  color: #3fd294;
+  z-index: 1000000;
+  padding: 10px 0px;
+
+  & * {
+    user-select: none;
+  }
+
+  & > p {
+    padding: 5px 15px;
+    font-size: 15px;
+    &:hover {
+      background-color: #333;
+    }
+  }
+
+  & > hr {
+    margin: 10px 0px;
+    background-color: #999;
+    border-style: none;
+    height: 1px;
+  }
+}
+
+.fullscreenPopup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #222c;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  & > div {
+    background-color: #454545;
+    padding: 40px 20px;
+    min-width: 500px;
+    max-width: 600px;
+    color: #eee;
+    border-radius: 2px;
+
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .aboutFounder {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    margin-top: 50px;
+    margin-bottom: 25px;
+
+    & > img {
+      border-radius: 50%;
+      user-select: none;
+    }
+
+    // Details
+    & > div {
+      margin-left: 20px;
+
+      & > p {
+        color: #aaa;
+      }
+
+      & > p:first-child {
+        font-size: 24px;
+        font-weight: 600;
+        color: #eee;
+      }
+
+      // Socials
+      & > div {
+        display: flex;
+        flex-direction: row;
+        margin-top: 5px;
+
+        & > i {
+          font-size: 22px;
+          color: #999;
+
+          &:hover {
+            color: #eee;
+            cursor: pointer;
+          }
+        }
+
+        & > i:not(:first-child) {
+          margin-left: 10px;
+        }
+      }
+    }
+  }
+}
+
+.btnPrimary {
+  background-color: #0000;
+  border: none;
+  color: #3fd294;
+  padding: 10px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #3fd29400;
+  border-bottom-color: #3fd29400;
+  transition: border-bottom-color 0.05s linear;
+
+  &:hover {
+    cursor: pointer;
+    border-bottom-color: #3fd294ff;
   }
 }
