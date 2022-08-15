@@ -3,5 +3,8 @@
   "editor.tabSize": 2,
   "files.eol": "\n",
   "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
-  "node-module-intellisense.scanFileModules": false
+  "node-module-intellisense.scanFileModules": false,
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   stopServer: (id) => ipcRenderer.invoke('stop-server', id),
   getServers: () => ipcRenderer.invoke('get-servers'),
   onServerStatus: (callback) => ipcRenderer.on('server-status', callback),
+  offServerStatus: (callback) => ipcRenderer.off('server-status', callback),
 
   getOverlays: () => ipcRenderer.invoke('get-overlays'),
   downloadOverlay: (id) => ipcRenderer.invoke('download-overlay', id),

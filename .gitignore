@@ -24,3 +24,7 @@ yarn-debug.log*
 yarn-error.log*
 
 .env
+
+public/rocketcast-server.exe
+public/log.txt
+log.txt

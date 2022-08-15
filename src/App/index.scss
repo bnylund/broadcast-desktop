@@ -162,16 +162,16 @@
 .btnPrimary {
   background-color: #0000;
   border: none;
-  color: #3fd294;
+  color: #fff;
   padding: 10px 10px;
   font-size: 16px;
   font-weight: 600;
-  border-bottom: 2px solid #3fd29400;
-  border-bottom-color: #3fd29400;
+  border-bottom: 2px solid #ffffff00;
+  border-bottom-color: #ffffff00;
   transition: border-bottom-color 0.05s linear;
 
   &:hover {
     cursor: pointer;
-    border-bottom-color: #3fd294ff;
+    border-bottom-color: #ffffff;
   }
 }

@@ -3,6 +3,8 @@ declare interface Window {
     spawnServer: () => Promise<boolean>;
     stopServer: (id: string) => Promise<boolean>;
     getServers: () => Promise<Server[]>;
+    onServerStatus: (callback: (event: any, server: Server) => void) => void
+    offServerStatus: (callback: (event: any, server: Server) => void) => void
 
     getOverlays: () => Promise<Overlay[]>;
     downloadOverlay: (id: string) => Promise<boolean>;
@@ -24,5 +26,7 @@ declare interface Overlay {
 }
 
 declare interface Server {
-  _id: string
+  pid: number
+  port: number
+  log: string
 }
