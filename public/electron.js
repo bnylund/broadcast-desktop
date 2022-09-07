@@ -1,29 +1,115 @@
 const path = require('path')
 const net = require('net')
-const http = require('http')
 const https = require('https')
 const fs = require('fs')
 const { spawn } = require('node:child_process')
 
-const { app, BrowserWindow, shell, ipcMain } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, autoUpdater } = require('electron')
 const isDev = require('electron-is-dev')
+const pidusage = require('pidusage')
+const { WebSocketServer } = require('ws')
+const { v4: uuidv4 } = require('uuid')
 
+// API: https://dev-api.rocketcast.io
+// Prod: https://api.rocketcast.io
 // TODO: Add services in here (relay instances, overlay instances)
 let servers = [],
   overlays = [],
   window
 
-// API: https://dev-api.rocketcast.io
-// Prod: https://api.rocketcast.io
+const termReg = new RegExp(
+  String.fromCharCode(27) + ']0;(.*?)' + String.fromCharCode(7),
+  'g',
+)
+
+const appPath =
+  process.env.NODE_ENV === 'development'
+    ? __dirname
+    : `${process.resourcesPath}/app`
+
+console.log('Environment: ' + process.env.NODE_ENV)
+
+// Port needs to stay constant here
+const wss = new WebSocketServer({ port: 24158 })
+
+wss.on('connection', (ws) => {
+  const id = uuidv4()
+
+  // Populate more information about the overlays eventually
+  // Current server, overlay scene, ...
+  overlays.push({
+    launch: Date.now(),
+    obsBrowserVersion: 'Unknown',
+    status: 'Unknown',
+    scene: {
+      name: 'Unknown',
+      width: 0,
+      height: 0,
+    },
+    ws,
+    id,
+  })
+
+  ws.on('message', (data) => {
+    if (data.toString().startsWith('UPDATE ')) {
+      try {
+        let obj = JSON.parse(data.toString().substring(7))
+
+        const overlay = overlays.find((x) => x.id === id)
+        if (!overlay) {
+          return
+        }
+        if (obj.status) overlay.status = obj.status
+        if (obj.obsBrowserVersion)
+          overlay.obsBrowserVersion = obj.obsBrowserVersion
+        if (obj.scene) overlay.scene = obj.scene
+      } catch (err) {}
+    }
+  })
+
+  ws.on('close', (code, reason) => {
+    // Send notification to window
+    overlays = overlays.filter((x) => x.id !== id)
+  })
+})
+
+// Auto-updater stuff
+if (app.isPackaged) {
+  const server = 'https://hazel-server-roan.vercel.app'
+  const url = `${server}/update/${process.platform}/${app.getVersion()}`
+
+  fs.appendFileSync('log.txt', `feed url: ${url}\n`)
+
+  autoUpdater.setFeedURL({ url })
+
+  setInterval(() => {
+    autoUpdater.checkForUpdates()
+  }, 10000)
+
+  autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
+    const dialogOpts = {
+      type: 'info',
+      buttons: ['Restart', 'Later'],
+      title: 'Application Update',
+      message: process.platform === 'win32' ? releaseNotes : releaseName,
+      detail:
+        'A new version has been downloaded. Restart the application to apply the updates.',
+    }
+
+    dialog.showMessageBox(dialogOpts).then((returnValue) => {
+      if (returnValue.response === 0) autoUpdater.quitAndInstall()
+    })
+  })
+}
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 750,
-    minHeight: 500,
-    minWidth: 750,
+    minHeight: 750,
+    minWidth: 1200,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(appPath, 'preload.js'),
     },
     titleBarStyle: 'hidden',
     titleBarOverlay: {
@@ -36,11 +122,17 @@ function createWindow() {
     backgroundColor: '#333',
   })
 
-  win.loadURL(
-    isDev
-      ? 'http://localhost:3000'
-      : `file://${path.join(__dirname, '../build/index.html')}`,
-  )
+  window = win
+
+  if (isDev) {
+    win.loadURL('http://localhost:3000')
+  } else {
+    fs.appendFileSync(
+      'log.txt',
+      `loading file ${path.join(appPath, 'build/index.html')}\n`,
+    )
+    win.loadFile(path.join(appPath, 'build/index.html'))
+  }
 
   if (isDev) {
     win.webContents.openDevTools({ mode: 'detach' })
@@ -61,24 +153,42 @@ function createWindow() {
 
       const server = spawn('rocketcast-server.exe', [port], {
         cwd: __dirname,
+        env: {
+          LOG: false,
+        },
       })
 
       servers.push({
         pid: server.pid,
         log: '',
         port,
+        stats: {
+          cpu: 0,
+          memory: 0,
+          ppid: process.pid,
+          pid: server.pid,
+          ctime: 0,
+          elapsed: 0,
+          timestamp: Date.now(),
+        },
       })
 
       server.stdout.on('data', (data) => {
         process.stdout.write(`[${server.pid}] ${data}`)
         const serv = servers.find((x) => x.pid === server.pid)
-        if (serv) serv.log += data
+        if (serv) {
+          serv.log += data
+          serv.log = serv.log.replaceAll(termReg, '')
+        }
       })
 
       server.stderr.on('data', (data) => {
         process.stderr.write(`[${server.pid}] ${data}`)
         const serv = servers.find((x) => x.pid === server.pid)
-        if (serv) serv.log += `[ERROR] ${data}`
+        if (serv) {
+          serv.log += `[ERROR] ${data}`
+          serv.log = serv.log.replaceAll(termReg, '')
+        }
       })
 
       server.on('close', (code) => {
@@ -96,7 +206,20 @@ function createWindow() {
         status: 'STARTED',
       })
 
-      return { pid: server.pid, port }
+      return {
+        pid: server.pid,
+        log: '',
+        port,
+        stats: {
+          cpu: 0,
+          memory: 0,
+          ppid: process.pid,
+          pid: server.pid,
+          ctime: 0,
+          elapsed: 0,
+          timestamp: Date.now(),
+        },
+      }
     } catch (err) {
       return { error: err }
     }
@@ -109,16 +232,54 @@ function createWindow() {
     if (!server) return false
 
     process.kill(server.pid, 'SIGINT')
+    servers = servers.filter((x) => x.pid !== server.pid)
     return true
   })
 
   ipcMain.handle('get-servers', async (event, args) => {
+    // Update server status, then return
+    servers = await Promise.all(
+      servers.map(async (val) => {
+        let stats
+        try {
+          //console.log(val.pid, await pidusage(val.pid))
+          stats = await pidusage(val.pid)
+        } catch (err) {}
+
+        return {
+          ...val,
+          stats,
+        }
+      }),
+    )
+
     return servers
   })
 
-  ipcMain.handle('get-overlays', async (event, args) => {})
+  // #region Overlays - Future implementation
+  ipcMain.handle('get-overlays', async (event, args) => {
+    // Exclude WS connection
+    return overlays.map((val) => {
+      return {
+        ...val,
+        ws: undefined,
+      }
+    })
+  })
+  ipcMain.handle('connect-overlay', async (event, id, server) => {
+    const overlay = overlays.find((x) => x.id === id)
+    if (!overlay) return false
+
+    if (!overlay.ws) return false
+
+    // If needed, we can also pass in the user's token as another parameter
+    // ex. CONNECT <server> [token]
+    overlay.ws.send('CONNECT ' + server)
+    return true
+  })
   ipcMain.handle('download-overlay', async (event, args) => {})
   ipcMain.handle('search-overlay', async (event, args) => {})
+  // #endregion
 
   ipcMain.handle('update-plugin', async (event, args) => {})
 
@@ -173,14 +334,20 @@ const downloadServer = () => {
   return new Promise((resolve, reject) => {
     try {
       try {
-        if (fs.existsSync(path.join(__dirname, 'rocketcast-server.exe')))
-          return resolve()
-        // Disable for now fs.unlinkSync(path.join(__dirname, 'rocketcast-server.exe'))
+        if (fs.existsSync(path.join(__dirname, 'rocketcast-server.exe'))) {
+          if (process.env.NODE_ENV === 'development') return resolve()
+          fs.unlinkSync(path.join(__dirname, 'rocketcast-server.exe'))
+        }
       } catch (err) {
         // Already downloaded and in use
         return resolve()
       }
 
+      window.webContents.send('server-download-status', {
+        downloaded: 0,
+        size: -1,
+        status: 'FETCHING',
+      })
       console.log('Fetching products...')
       https.get(
         `${process.env.BACKEND || 'https://dev-api.rocketcast.io'}/v1/products`,
@@ -210,21 +377,22 @@ const downloadServer = () => {
 
                 // after download completed close filestream
                 file.on('finish', () => {
+                  window.webContents.send('server-download-status', {
+                    downloaded: file.bytesWritten,
+                    size: jdata['rocketcast-server'].Size,
+                    status: 'DOWNLOADED',
+                  })
                   file.close()
                   console.log('server downloaded')
                   resolve()
                 })
 
                 fres.on('data', (data) => {
-                  console.log(
-                    file.bytesWritten +
-                      ' / ' +
-                      jdata['rocketcast-server'].Size +
-                      ` (${
-                        (file.bytesWritten / jdata['rocketcast-server'].Size) *
-                        100
-                      }%)`,
-                  )
+                  window.webContents.send('server-download-status', {
+                    downloaded: file.bytesWritten,
+                    size: jdata['rocketcast-server'].Size,
+                    status: 'DOWNLOADING',
+                  })
                 })
               })
             } catch (err) {

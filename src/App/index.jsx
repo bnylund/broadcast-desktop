@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Main } from './Main'
+import Modal from 'react-modal'
 import logo from '../assets/logo.png'
 import ben from '../assets/ben.jpg'
 import './index.scss'
@@ -66,6 +67,9 @@ function App() {
             style={{ filter: 'drop-shadow(1px 1px 5px #111a)' }}
           />{' '}
           </div>*/}
+      </div>
+      <div className="footer">
+        <p>Bar at bottom</p>
       </div>
 
       {/* Popups for toolbar, etc */}

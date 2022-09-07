@@ -1,0 +1,49 @@
+.overlays {
+  width: calc(100% - 40px);
+  height: calc(100% - 40px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+
+  & > table {
+    color: white;
+    border: none;
+    border-spacing: 0;
+    width: 90%;
+    font-family: Arial, Helvetica, sans-serif;
+
+    & > thead {
+      & > tr > td {
+        line-height: 2.5;
+        padding: 5px 10px;
+        border-bottom: 2px solid #fff;
+      }
+    }
+
+    & > tbody {
+      & > tr {
+        &:hover {
+          background-color: #444;
+          cursor: pointer;
+        }
+
+        & > td {
+          padding: 5px 10px;
+          line-height: 2.5;
+        }
+
+        & > td:last-child {
+          width: 120px;
+
+          background-color: #0000;
+          border: none;
+          padding: 5px 15px;
+          border-radius: 5px;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+}

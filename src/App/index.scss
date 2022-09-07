@@ -20,7 +20,7 @@
 }
 
 .content {
-  height: calc(100vh - 35px);
+  height: calc(100vh - 35px - 25px);
   width: 100vw;
   position: absolute;
   top: 35px;
@@ -47,6 +47,22 @@
     &[data-open='true'] {
       background-color: #3d5055;
     }
+  }
+}
+
+.footer {
+  background: #3d5055;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: 25px;
+  width: 100vw;
+  color: #3fd294;
+  padding: 0px 10px;
+  font-size: 14px;
+
+  * {
+    user-select: none;
   }
 }
 

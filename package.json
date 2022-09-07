@@ -4,7 +4,6 @@
   "author": "Benjamin Nylund <ben@nylund.us>",
   "version": "0.1.1",
   "private": true,
-  "homepage": "./",
   "main": "public/electron.js",
   "engines": {
     "node": ">=14.x"
@@ -12,7 +11,6 @@
   "dependencies": {
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
-    "@mui/base": "^5.0.0-alpha.92",
     "@mui/icons-material": "^5.8.4",
     "@mui/material": "^5.8.7",
     "@testing-library/jest-dom": "^5.16.4",
@@ -20,28 +18,39 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.27.2",
     "cross-env": "^7.0.3",
+    "electron-builder-squirrel-windows": "^23.5.0",
     "electron-is-dev": "^2.0.0",
+    "moment": "^2.29.4",
+    "pidusage": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-modal": "^3.15.1",
     "react-scripts": "5.0.1",
     "sass": "^1.53.0",
-    "web-vitals": "^2.1.4"
+    "socket.io-client": "^4.5.1",
+    "uuid": "^9.0.0",
+    "web-vitals": "^2.1.4",
+    "ws": "^8.8.1"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "concurrently -k \"cross-env BROWSER=none npm start\" \"npm:electron\"",
+    "dev": "concurrently -k \"cross-env BROWSER=none npm start\" \"cross-env NODE_ENV=development npm run electron\"",
     "electron": "wait-on tcp:3000 && electron .",
     "pack": "yarn build && electron-builder --dir",
-    "dist": "yarn build && electron-builder",
+    "dist": "yarn build && electron-builder --publish always",
+    "dist:publish": "yarn build && electron-builder --publish always",
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext .js"
   },
   "build": {
     "appId": "io.rocketcast.Rocketcast",
-    "productName": "Rocketcast"
+    "productName": "Rocketcast",
+    "win": {
+      "target": "squirrel"
+    }
   },
   "eslintConfig": {
     "extends": [

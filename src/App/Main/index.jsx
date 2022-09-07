@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Servers } from './pages'
+import { Overlays, Servers } from './pages'
 import './main.scss'
 
 function renderPage(page) {
@@ -7,7 +7,7 @@ function renderPage(page) {
     case 'Dashboard':
       return <p>Dashboard</p>
     case 'Overlays':
-      return <p>Overlays</p>
+      return <Overlays />
     case 'Servers':
       return <Servers />
     case 'Games':
@@ -28,6 +28,7 @@ export const Main = (props) => {
         height: '100%',
         width: '100%',
       }}
+      id="main-app"
     >
       <div className="sidebar">
         <div className="user">

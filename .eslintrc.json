@@ -1,5 +1,10 @@
 {
-  "extends": ["prettier", "plugin:prettier/recommended", "plugin:react/recommended", "plugin:react/jsx-runtime"],
+  "extends": [
+    "prettier",
+    "plugin:prettier/recommended",
+    "plugin:react/recommended",
+    "plugin:react/jsx-runtime"
+  ],
   "plugins": ["prettier"],
   "parserOptions": {
     "ecmaVersion": 2018,
@@ -7,5 +12,8 @@
     "ecmaFeatures": {
       "jsx": true
     }
+  },
+  "rules": {
+    "react/prop-types": 0
   }
 }
