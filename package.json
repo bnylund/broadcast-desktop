@@ -2,7 +2,7 @@
   "name": "rocketcast",
   "description": "Rocketcast Desktop Client",
   "author": "Ben Nylund <ben@nylund.us>",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "main": "public/electron.js",
   "engines": {
@@ -45,7 +45,10 @@
     "dist": "yarn build && electron-builder --publish always",
     "dist:publish": "yarn build && electron-builder --publish always",
     "postinstall": "electron-builder install-app-deps",
-    "lint": "eslint . --ext .js"
+    "lint": "eslint . --ext .js",
+    "bump": "yarn version --patch",
+    "bump:minor": "yarn version --minor",
+    "bump:major": "yarn version --major"
   },
   "build": {
     "appId": "io.rocketcast.Rocketcast",
