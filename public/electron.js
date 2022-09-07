@@ -2,35 +2,53 @@ const path = require('path')
 const net = require('net')
 const https = require('https')
 const fs = require('fs')
+const nodeNotifier = require('node-notifier').WindowsToaster
 const { spawn } = require('node:child_process')
 
-const { app, BrowserWindow, shell, ipcMain, autoUpdater } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu } = require('electron')
 const isDev = require('electron-is-dev')
 const pidusage = require('pidusage')
 const { WebSocketServer } = require('ws')
 const { v4: uuidv4 } = require('uuid')
+const { autoUpdater } = require('electron-updater')
 
 // API: https://dev-api.rocketcast.io
 // Prod: https://api.rocketcast.io
 // TODO: Add services in here (relay instances, overlay instances)
 let servers = [],
   overlays = [],
-  window
+  window,
+  tray
 
 const termReg = new RegExp(
   String.fromCharCode(27) + ']0;(.*?)' + String.fromCharCode(7),
   'g',
 )
 
-const appPath =
-  process.env.NODE_ENV === 'development'
-    ? __dirname
-    : `${process.resourcesPath}/app`
+const appPath = isDev ? __dirname : `${process.resourcesPath}/app.asar`
+
+const assetPath = isDev
+  ? path.join(__dirname, '..', 'assets')
+  : `${process.resourcesPath}/assets`
 
 console.log('Environment: ' + process.env.NODE_ENV)
 
-// Port needs to stay constant here
-const wss = new WebSocketServer({ port: 24158 })
+const notifier = new nodeNotifier({
+  withFallback: true,
+})
+
+// #region Websocket Server
+
+let wss
+
+try {
+  // Port needs to stay constant here
+  wss = new WebSocketServer({ port: 24158 })
+} catch (err) {
+  // Rocketcast already open?
+  app.quit()
+  process.exit()
+}
 
 wss.on('connection', (ws) => {
   const id = uuidv4()
@@ -73,34 +91,15 @@ wss.on('connection', (ws) => {
   })
 })
 
-// Auto-updater stuff
-if (app.isPackaged) {
-  const server = 'https://hazel-server-roan.vercel.app'
-  const url = `${server}/update/${process.platform}/${app.getVersion()}`
+wss.once('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    // Rocketcast already open?
+    app.quit()
+    process.exit()
+  }
+})
 
-  fs.appendFileSync('log.txt', `feed url: ${url}\n`)
-
-  autoUpdater.setFeedURL({ url })
-
-  setInterval(() => {
-    autoUpdater.checkForUpdates()
-  }, 10000)
-
-  autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-    const dialogOpts = {
-      type: 'info',
-      buttons: ['Restart', 'Later'],
-      title: 'Application Update',
-      message: process.platform === 'win32' ? releaseNotes : releaseName,
-      detail:
-        'A new version has been downloaded. Restart the application to apply the updates.',
-    }
-
-    dialog.showMessageBox(dialogOpts).then((returnValue) => {
-      if (returnValue.response === 0) autoUpdater.quitAndInstall()
-    })
-  })
-}
+// #endregion
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -109,7 +108,7 @@ function createWindow() {
     minHeight: 750,
     minWidth: 1200,
     webPreferences: {
-      preload: path.join(appPath, 'preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
     },
     titleBarStyle: 'hidden',
     titleBarOverlay: {
@@ -124,13 +123,41 @@ function createWindow() {
 
   window = win
 
+  // #region Context Menu
+
+  if (!tray) {
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Open Rocketcast',
+        click: () => {
+          window.show()
+        },
+      },
+      {
+        label: 'Exit',
+        click: () => {
+          app.isQuitting = true
+          app.quit()
+        },
+      },
+    ])
+
+    console.log('opening tray')
+    tray = new Tray(path.join(assetPath, 'logo.png'))
+    tray.setTitle('Rocketcast')
+    tray.setToolTip('Rocketcast')
+    tray.on('click', (e) => {
+      if (window.isVisible()) window.hide()
+      else window.show()
+    })
+    tray.setContextMenu(contextMenu)
+  }
+
+  // #endregion
+
   if (isDev) {
     win.loadURL('http://localhost:3000')
   } else {
-    fs.appendFileSync(
-      'log.txt',
-      `loading file ${path.join(appPath, 'build/index.html')}\n`,
-    )
     win.loadFile(path.join(appPath, 'build/index.html'))
   }
 
@@ -143,6 +170,36 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  win.on('close', (ev) => {
+    if (!app.isQuitting) {
+      ev.preventDefault()
+      win.hide()
+
+      notifier.notify({
+        title: 'Rocketcast',
+        message:
+          'Rocketcast is still running in the background. Close it via the task tray.',
+        appID: 'Rocketcast',
+        icon: path.join(assetPath, 'logo.png'),
+      })
+    }
+
+    return false
+  })
+
+  win.on('minimize', (ev) => {
+    ev.preventDefault()
+    win.hide()
+
+    notifier.notify({
+      title: 'Rocketcast',
+      message:
+        'Rocketcast is still running in the background. Close it via the task tray.',
+      appID: 'Rocketcast',
+      icon: path.join(assetPath, 'logo.png'),
+    })
+  })
+
   // Grab server .exe from Serverless API, then assign a random port to it on launch
   // rocketcast-server.exe <PORT>
   ipcMain.handle('spawn-server', async (event) => {
@@ -152,7 +209,7 @@ function createWindow() {
       console.log('Spawning server on port ' + port)
 
       const server = spawn('rocketcast-server.exe', [port], {
-        cwd: __dirname,
+        cwd: path.join(process.cwd(), 'temp'),
         env: {
           LOG: false,
         },
@@ -284,19 +341,9 @@ function createWindow() {
   ipcMain.handle('update-plugin', async (event, args) => {})
 
   ipcMain.handle('run-at-startup', async (event, state) => {
-    const appFolder = path.dirname(process.execPath)
-    const updateExe = path.resolve(appFolder, '..', 'Update.exe')
-    const exeName = path.basename(process.execPath)
-
     app.setLoginItemSettings({
       openAtLogin: state,
-      path: updateExe,
-      args: [
-        '--processStart',
-        `"${exeName}"`,
-        '--process-start-args',
-        `"--hidden"`,
-      ],
+      path: process.execPath,
     })
 
     return state
@@ -305,13 +352,11 @@ function createWindow() {
   ipcMain.handle('get-version', (event) => app.getVersion())
 }
 
-app.whenReady().then(createWindow)
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+app.on('ready', () => {
+  autoUpdater.checkForUpdatesAndNotify()
 })
+
+app.whenReady().then(createWindow)
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
@@ -331,14 +376,24 @@ const getOpenPort = async () => {
 }
 
 const downloadServer = () => {
+  if (!fs.existsSync(path.join(process.cwd(), 'temp')))
+    fs.mkdirSync(path.join(process.cwd(), 'temp'))
+
   return new Promise((resolve, reject) => {
     try {
       try {
-        if (fs.existsSync(path.join(__dirname, 'rocketcast-server.exe'))) {
+        if (
+          fs.existsSync(
+            path.join(process.cwd(), 'temp', 'rocketcast-server.exe'),
+          )
+        ) {
           if (process.env.NODE_ENV === 'development') return resolve()
-          fs.unlinkSync(path.join(__dirname, 'rocketcast-server.exe'))
+          fs.unlinkSync(
+            path.join(process.cwd(), 'temp', 'rocketcast-server.exe'),
+          )
         }
       } catch (err) {
+        console.log(`DL ERR: `, err)
         // Already downloaded and in use
         return resolve()
       }
@@ -369,7 +424,7 @@ const downloadServer = () => {
               }
 
               const file = fs.createWriteStream(
-                path.join(__dirname, 'rocketcast-server.exe'),
+                path.join(process.cwd(), 'temp', 'rocketcast-server.exe'),
               )
 
               https.get(jdata['rocketcast-server'].Url, (fres) => {
